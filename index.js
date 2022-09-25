@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const notifier = require('node-notifier');
 const env = require('./env.json');
 const { ID, PW } = env;
-const DATE = '20220508';
+const DATE = '20221010';
 const TIME = '160000';
 const DELAY = 1000;
 
@@ -12,16 +12,16 @@ const SEARCH_URI =
   'https://etk.srail.kr/hpg/hra/01/selectScheduleList.do?pageId=TK0101010000';
 
 async function main() {
-  const browser = await puppeteer.launch({ defaultViewport: null });
+  const browser = await puppeteer.launch({ devtools: true });
   const page = await browser.newPage();
   await page.setViewport({
-    width: 100,
-    height: 100,
+    width: 1920,
+    height: 800,
   });
   await page.goto(LOGIN_URI);
   await page.type('#srchDvNm01', ID);
   await page.type('#hmpgPwdCphd01', PW);
-  await page.click('.submit.btn_midium.btn_pastel2');
+  await page.click('.submit.loginSubmit');
   await page.waitForNavigation();
   await page.goto(SEARCH_URI);
 
@@ -34,11 +34,10 @@ async function main() {
       const result = await page.evaluate(() => {
         return new Promise((resolve) => {
           const btns = document.querySelectorAll(
-            '.btn_small.btn_burgundy_dark.val_m.wx90',
+            '#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr > td:nth-child(7) > a'
           );
-
           btns.forEach((btn) => {
-            if (result && btn.tagName === 'A') {
+            if (btn.classList.contains('btn_burgundy_dark') && btn.tagName === 'A') {
               btn.click();
               resolve(true);
             }
@@ -50,13 +49,23 @@ async function main() {
 
       !result &&
         setTimeout(async () => {
-          await page.click('#search_top_tag input');
+          try {
+            await page.click('#search_top_tag input');
+          } catch (e) { }
         }, DELAY);
 
-      result && console.log('end');
-      notifier.notify('reserve finish');
+      if (result) {
+        notifier.notify({
+          title: "srt",
+          message: 'reserve finish', sound: true
+        });
+        setTimeout(() => {
+          process.exit()
+        }, 5000)
+      }
     });
   }
+
   await parseTable();
 }
 
